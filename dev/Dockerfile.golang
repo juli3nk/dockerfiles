@@ -1,0 +1,46 @@
+FROM juli3nk/dev
+
+ENV GO_VERSION=1.14.2 \
+	PROTOBUF_VERSION=3.9.0 \
+	PROTOBUF_GO_VERSION=1.3.2 \
+	GRPCWEB_VERSION=1.0.4 \
+	PROTOTOOL_VERSION=1.8.0
+
+ENV GOPATH=/go \
+	GOARCH=amd64 \
+	PATH=/go/bin:/usr/local/go/bin:$PATH
+
+COPY data/profile/go.sh /etc/profile.d/go.sh
+
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+	&& set -x \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		gccgo \
+	&& apt-get -y autoremove \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN set -x \
+	# Install Go
+	&& curl -sfL https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz | tar -xzC /usr/local \
+	# Install gRPC
+	&& go get -u google.golang.org/grpc \
+	# Install Protobuf
+	&& curl -sfL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > /usr/local/src/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip \
+	&& unzip -d /tmp /usr/local/src/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip \
+	&& mv /tmp/bin/protoc /usr/local/bin/ \
+	&& mv /tmp/include/* /usr/local/include/ \
+	&& rm -rf /usr/local/src/* /tmp/* \
+	# Install protoc-gen-go
+	&& go get -d -u github.com/golang/protobuf/protoc-gen-go \
+	&& git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout v${PROTOBUF_GO_VERSION} \
+	&& go install github.com/golang/protobuf/protoc-gen-go \
+	# Install GRPC Web
+	&& curl -sfL https://github.com/grpc/grpc-web/releases/download/${GRPCWEB_VERSION}/protoc-gen-grpc-web-${GRPCWEB_VERSION}-linux-x86_64 -o /usr/local/bin/protoc-gen-grpc-web \
+	&& chmod +x /usr/local/bin/protoc-gen-grpc-web \
+	# Install Prototool
+	&& curl -sSL https://github.com/uber/prototool/releases/download/v${PROTOTOOL_VERSION}/prototool-$(uname -s)-$(uname -m) -o /usr/local/bin/prototool \
+	&& chmod +x /usr/local/bin/prototool
+
+WORKDIR /go/src

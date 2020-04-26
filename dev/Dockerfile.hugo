@@ -1,0 +1,5 @@
+FROM juli3nk/dev:nodejs
+
+ENV HUGO_VERSION 0.57.2
+
+RUN curl -sfL https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz | tar -xzC /usr/local/bin
