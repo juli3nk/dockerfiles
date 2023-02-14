@@ -1,19 +1,3 @@
-FROM debian:stable-slim AS builder
-
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
-	&& set -x \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends \
-		ca-certificates \
-		curl \
-		git
-
-COPY data/get-dotfiles.sh /usr/local/bin/get-dotfiles.sh
-
-RUN mkdir /root/bin \
-	&& /usr/local/bin/get-dotfiles.sh
-
-
 FROM debian:stable-slim
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
@@ -44,6 +28,7 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 		rsync \
 		software-properties-common \
 		sqlite3 \
+		sudo \
 		unzip \
 		vim \
 		wget \
@@ -51,16 +36,22 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY data/get-docker.sh /usr/local/bin/get-docker.sh
+COPY data/get-dotfiles.sh /usr/local/bin/get-dotfiles.sh
+COPY data/sudo.user /etc/sudoers.d/user
 
-RUN mkdir /root/.ssh \
-	&& mkdir /root/bin
+RUN useradd -m -s /bin/bash -g users user
 
-COPY --from=builder /root/bin/dotfiles /root/bin/dotfiles
+USER user
 
-RUN git clone https://github.com/juli3nk/dot-files.git /root/Dotfiles \
-	&& cd /root/Dotfiles \
-	&& /root/bin/dotfiles -profile container -sync -force \
+RUN mkdir $HOME/.ssh \
+	&& mkdir $HOME/bin \
+	&& /usr/local/bin/get-dotfiles.sh
+
+RUN git clone https://github.com/juli3nk/dot-files.git $HOME/Dotfiles \
+	&& cd $HOME/Dotfiles \
+	&& $HOME/bin/dotfiles -profile container -sync -force \
 	&& cd
+
+WORKDIR /home/user
 
 CMD ["bash", "-l"]

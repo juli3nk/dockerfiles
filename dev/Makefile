@@ -4,9 +4,17 @@ IMAGE_NAME := "juli3nk/dev"
 images:
 	@docker image ls -f "reference=$(IMAGE_NAME)"
 
+.PHONY: image-update
+image-update:
+	docker image pull debian:stable-slim
+
 .PHONY: main
-main:
+main: image-update
 	docker image build --no-cache -t $(IMAGE_NAME) .
+
+.PHONY: user
+user: image-update
+	docker image build --no-cache -t $(IMAGE_NAME):user -f Dockerfile.user .
 
 .PHONY: golang
 golang:
@@ -14,11 +22,24 @@ golang:
 
 .PHONY: nodejs
 nodejs:
-	docker image build --no-cache -t $(IMAGE_NAME):nodejs -f Dockerfile.nodejs .
+	docker image build --no-cache -t $(IMAGE_NAME):nodejs-18 -f Dockerfile.nodejs .
+
+.PHONY: nodejs-user
+nodejs-user:
+	docker image build \
+		--no-cache \
+		--build-arg "tag=user" \
+		--build-arg "user=user" \
+		-t $(IMAGE_NAME):nodejs-user \
+		-f Dockerfile.nodejs .
 
 .PHONY: python
 python:
 	docker image build --no-cache -t $(IMAGE_NAME):python -f Dockerfile.python .
+
+.PHONY: grpc-py
+grpc-py:
+	docker image build --no-cache -t $(IMAGE_NAME):grpc-py -f Dockerfile.grpc-py .
 
 .PHONY: ruby
 ruby:
@@ -27,6 +48,10 @@ ruby:
 .PHONY: hugo
 hugo:
 	docker image build --no-cache -t $(IMAGE_NAME):hugo -f Dockerfile.hugo .
+
+.PHONY: arduino
+arduino:
+	docker image build --no-cache -t $(IMAGE_NAME):arduino -f Dockerfile.arduino .
 
 .PHONY: shellcheck
 shellcheck:

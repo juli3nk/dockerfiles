@@ -1,0 +1,37 @@
+FROM juli3nk/dev
+
+COPY data/profile/esp.sh /etc/profile.d/esp.sh
+
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+	&& set -x \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		git \
+		wget \
+		flex \
+		bison \
+		gperf \
+		python3 \
+		python3-venv \
+		cmake \
+		ninja-build \
+		ccache \
+		libffi-dev \
+		libssl-dev \
+		dfu-util \
+		libusb-1.0-0 \
+	&& apt-get -y autoremove \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN set -x \
+	# Install esp-idf
+	&& mkdir -p /usr/local/src/esp \
+	&& cd /usr/local/src/esp \
+	&& git clone --recursive https://github.com/espressif/esp-idf.git \
+	&& cd esp-idf \
+	&& ./install.sh all \
+	# Install arduino-cli
+	&& curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR=/usr/local/bin sh
+
+WORKDIR /root

@@ -1,10 +1,34 @@
-FROM juli3nk/dev
+FROM debian:stable-slim AS builder
 
-ENV GO_VERSION=1.14.2 \
-	PROTOBUF_VERSION=3.9.0 \
-	PROTOBUF_GO_VERSION=1.3.2 \
-	GRPCWEB_VERSION=1.0.4 \
-	PROTOTOOL_VERSION=1.8.0
+ARG GO_VERSION=1.19.2
+ARG PROTOBUF_VERSION=3.19.1
+ARG GRPCWEB_VERSION=1.2.1
+ARG BUF_VERSION=0.56.0
+
+RUN set -x \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		ca-certificates \
+		curl \
+		unzip
+
+RUN set -x \
+	# Install Go
+	&& curl -sfL https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz | tar -xzC /tmp \
+	# Install Protobuf
+	&& curl -sfL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > /usr/local/src/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip \
+	&& unzip -d /tmp/protobuf /usr/local/src/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip \
+	# Install GRPC Web
+	&& curl -sfL https://github.com/grpc/grpc-web/releases/download/${GRPCWEB_VERSION}/protoc-gen-grpc-web-${GRPCWEB_VERSION}-linux-x86_64 -o /tmp/protoc-gen-grpc-web \
+	&& chmod +x /tmp/protoc-gen-grpc-web \
+	# Install Buf
+	&& curl -sfL https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64 -o /tmp/buf \
+	&& curl -sfL https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/protoc-gen-buf-check-breaking-Linux-x86_64 -o /tmp/protoc-gen-buf-check-breaking \
+	&& curl -sfL https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/protoc-gen-buf-check-lint-Linux-x86_64 -o /tmp/protoc-gen-buf-check-lint \
+	&& chmod +x /tmp/buf /tmp/protoc-gen-buf-*
+
+
+FROM juli3nk/dev
 
 ENV GOPATH=/go \
 	GOARCH=amd64 \
@@ -21,26 +45,25 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+COPY --from=builder /tmp/go /usr/local/go
+COPY --from=builder /tmp/protobuf/bin/protoc /usr/local/bin/
+COPY --from=builder /tmp/protobuf/include/google /usr/local/include/google
+COPY --from=builder /tmp/protoc-gen-grpc-web /usr/local/bin/
+COPY --from=builder /tmp/buf /usr/local/bin/
+COPY --from=builder /tmp/protoc-gen-buf-* /usr/local/bin/
+
 RUN set -x \
-	# Install Go
-	&& curl -sfL https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz | tar -xzC /usr/local \
 	# Install gRPC
-	&& go get -u google.golang.org/grpc \
-	# Install Protobuf
-	&& curl -sfL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip > /usr/local/src/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip \
-	&& unzip -d /tmp /usr/local/src/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip \
-	&& mv /tmp/bin/protoc /usr/local/bin/ \
-	&& mv /tmp/include/* /usr/local/include/ \
-	&& rm -rf /usr/local/src/* /tmp/* \
+	#&& go get -u google.golang.org/grpc \
 	# Install protoc-gen-go
-	&& go get -d -u github.com/golang/protobuf/protoc-gen-go \
-	&& git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout v${PROTOBUF_GO_VERSION} \
-	&& go install github.com/golang/protobuf/protoc-gen-go \
-	# Install GRPC Web
-	&& curl -sfL https://github.com/grpc/grpc-web/releases/download/${GRPCWEB_VERSION}/protoc-gen-grpc-web-${GRPCWEB_VERSION}-linux-x86_64 -o /usr/local/bin/protoc-gen-grpc-web \
-	&& chmod +x /usr/local/bin/protoc-gen-grpc-web \
-	# Install Prototool
-	&& curl -sSL https://github.com/uber/prototool/releases/download/v${PROTOTOOL_VERSION}/prototool-$(uname -s)-$(uname -m) -o /usr/local/bin/prototool \
-	&& chmod +x /usr/local/bin/prototool
+	#&& GO111MODULE=off go get -d -u google.golang.org/protobuf/cmd/protoc-gen-go \
+	#&& git -C "$(go env GOPATH)"/src/google.golang.org/protobuf checkout v${PROTOBUF_GO_VERSION} \
+	#&& GO111MODULE=off go install google.golang.org/protobuf/cmd/protoc-gen-go \
+	&& GO111MODULE=off go get google.golang.org/protobuf/cmd/protoc-gen-go \
+	# Install protoc-gen-go-grpc
+	&& GO111MODULE=off go get google.golang.org/grpc/cmd/protoc-gen-go-grpc \
+	# Install protoc-gen-gotagger
+	&& GO111MODULE=off go get github.com/juli3nk/protoc-gen-gotagger \
+	&& GO111MODULE=off go get honnef.co/go/tools/cmd/staticcheck
 
 WORKDIR /go/src

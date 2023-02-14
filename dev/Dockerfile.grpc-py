@@ -1,0 +1,20 @@
+FROM debian:stable-slim
+
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+	&& set -x \
+	&& apt-get update \
+	&& apt-get install -y \
+		apt-transport-https \
+		python3 \
+		python3-pip \
+	&& pip3 install grpcio grpcio-tools \
+	&& apt-get remove -y \
+		build-essential \
+		python3-dev \
+	&& apt-get -y autoremove \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY data/grpc-py.sh /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
