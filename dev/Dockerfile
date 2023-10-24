@@ -2,8 +2,8 @@ FROM debian:stable-slim AS builder
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
 	&& set -x \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends \
+	&& apt update \
+	&& apt install --no-install-recommends --yes \
 		ca-certificates \
 		curl \
 		git
@@ -18,8 +18,8 @@ FROM debian:stable-slim
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
 	&& set -x \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends \
+	&& apt update \
+	&& apt install --no-install-recommends --yes \
 		apt-transport-https \
 		build-essential \
 		bzip2 \
@@ -47,20 +47,18 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 		unzip \
 		vim \
 		wget \
-	&& apt-get -y autoremove \
-	&& apt-get clean \
+	&& apt autoremove --yes \
+	&& apt clean \
 	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY data/get-docker.sh /usr/local/bin/get-docker.sh
 
-RUN mkdir /root/.ssh \
-	&& mkdir /root/bin
+RUN mkdir -p /root/.ssh \
+	&& mkdir -p /root/.local/bin
 
-COPY --from=builder /root/bin/dotfiles /root/bin/dotfiles
+COPY --from=builder /root/bin/dotfiles /root/.local/bin/dotfiles
 
 RUN git clone https://github.com/juli3nk/dot-files.git /root/Dotfiles \
-	&& cd /root/Dotfiles \
-	&& /root/bin/dotfiles -profile container -sync -force \
-	&& cd
+	&& /root/.local/bin/dotfiles -name Dotfiles -profile container -sync -force
 
 CMD ["bash", "-l"]

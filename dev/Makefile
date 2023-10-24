@@ -1,5 +1,8 @@
 IMAGE_NAME := "juli3nk/dev"
 
+ANSIBLE_VERSION := "4.10.0"
+
+
 .PHONY: images
 images:
 	@docker image ls -f "reference=$(IMAGE_NAME)"
@@ -55,19 +58,19 @@ arduino:
 
 .PHONY: shellcheck
 shellcheck:
-	@for file in $(shell find . -type f -executable -not -path "./.git/*"); do \
-                echo "Validating : $$file"; \
-                docker container run --rm --mount type=bind,src=$$PWD,dst=/mnt,ro koalaman/shellcheck -e SC2086 -e SC2046 -e SC1090 "$$file"; \
-                if [ $$? -gt 0 ]; then \
-                        continue; \
-                fi; \
-        done;
+  @for file in $(shell find . -type f -executable -not -path "./.git/*"); do \
+    echo "Validating : $$file"; \
+    docker container run --rm --mount type=bind,src=$$PWD,dst=/mnt,ro koalaman/shellcheck -e SC2086 -e SC2046 -e SC1090 "$$file"; \
+    if [ $$? -gt 0 ]; then \
+            continue; \
+    fi; \
+  done;
 
 .PHONY: dockerlint
 dockerlint:
-	@for file in $(shell find . -name 'Dockerfile*'); do \
-                echo "Validating : $$file"; \
-                docker container run -i --rm hadolint/hadolint hadolint --ignore DL3006 --ignore DL3008 --ignore DL3009 --ignore DL3018 --ignore DL3013 --ignore DL4006 - < $$file; \
-        done;
+  @for file in $(shell find . -name 'Dockerfile*'); do \
+    echo "Validating : $$file"; \
+    docker container run -i --rm hadolint/hadolint hadolint --ignore DL3006 --ignore DL3008 --ignore DL3009 --ignore DL3018 --ignore DL3013 --ignore DL4006 - < $$file; \
+  done;
 
 .DEFAULT_GOAL := main

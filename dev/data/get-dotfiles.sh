@@ -9,5 +9,5 @@ get_latest_tag() {
 
 LATEST_TAG=$(get_latest_tag)
 
-curl -sSL ${DOTFILES_URL}/releases/download/${LATEST_TAG}/dotfiles -o ${DOTFILES_PATH}
+curl -sSL ${DOTFILES_URL}/releases/download/${LATEST_TAG}/dotfiles-linux-amd64 -o ${DOTFILES_PATH}
 chmod +x ${DOTFILES_PATH}
